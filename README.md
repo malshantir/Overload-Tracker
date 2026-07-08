@@ -1,16 +1,57 @@
-# React + Vite
+# OVERLOAD Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A mobile-first progressive overload fitness PWA built with React and Vite. Designed for lifters who want to track their training intelligently — not just log numbers, but actually progress.
 
-Currently, two official plugins are available:
+## Live Demo
+🔗 Coming soon (Vercel deployment in progress)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **Custom Program Builder** — Create training splits with custom days and exercises, set rep ranges and set counts
+- **Intelligent Session Logging** — Log weight and reps per set with previous session data shown as reference
+- **Progressive Overload Coaching** — AI-powered coaching tips based on last session performance (increase weight, push more reps, or maintain)
+- **Rest Timer** — Built-in rest timer with custom duration presets that persist across sets
+- **Exercise Notes** — Add per-exercise notes that carry over to future sessions
+- **Progress Tracking** — Visual progress charts per exercise with session history and best set tracking
+- **Calendar View** — Full training history calendar with session details
+- **Dynamic Session Editing** — Add/remove exercises and sets mid-session with option to save changes permanently
+- **Exercise Reordering** — Drag-and-drop reordering of exercises during active sessions
+- **Multiple Programs** — Create new training programs while preserving full historical data
+- **User Authentication** — Local account system with username, email and password
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- **Frontend:** React 18, Vite
+- **Styling:** Custom CSS with CSS variables, dark theme
+- **State Management:** React useState/useEffect hooks
+- **Data Persistence:** localStorage (Supabase integration planned)
+- **AI Coaching:** Progressive overload logic with Claude API integration planned
+- **Deployment:** Vercel (coming soon)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Roadmap
+
+- [ ] Vercel deployment
+- [ ] Supabase backend integration for cross-device sync
+- [ ] AI progress analysis powered by Claude API
+- [ ] PWA setup for native mobile installation
+- [ ] Design polish with animation libraries
+
+## Running Locally
+
+```bash
+git clone https://github.com/malshantir/Overload-Tracker.git
+cd Overload-Tracker
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.
+
+## Development Approach
+
+Developed using Claude Code as an AI-assisted development tool throughout the build process — demonstrating modern engineering workflows. Features were planned, prompted, debugged and iterated using AI tooling, reflecting how professional development teams increasingly work in 2026.
+
+## Author
+
+Mohammed Alshantir — IT Student
+[GitHub](https://github.com/malshantir)
