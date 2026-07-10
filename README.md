@@ -3,7 +3,7 @@
 A mobile-first progressive overload fitness PWA built with React and Vite. Designed for lifters who want to track their training intelligently — not just log numbers, but actually progress.
 
 ## Live Demo
-🔗 Coming soon (Vercel deployment in progress)
+[Live Demo](https://overload-tracker-1aub-gamma.vercel.app)
 
 ## Features
 
