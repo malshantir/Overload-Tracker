@@ -250,7 +250,7 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 input[type=number]{-moz-appearance:textfield}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--c5);border-radius:2px}
 .app{display:flex;flex-direction:column;width:100%;height:100vh;max-width:100%}@media(min-width:600px){.app{max-width:100%;margin:0}}
-.nav{display:flex;border-top:1px solid #1e1e1e;background:#080808;flex-shrink:0;order:2}
+.nav{display:flex;border-top:1px solid #1e1e1e;background:#080808;flex-shrink:0;order:2;padding-bottom:env(safe-area-inset-bottom)}
 .nb{flex:1;background:none;border:none;border-top:2px solid transparent;color:#aaaaaa;font-family:'DM Mono',monospace;font-size:7px;letter-spacing:.1em;padding:9px 2px 7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .2s;margin-top:-1px}
 .nb.act{color:#ffffff;border-top-color:#ffffff}
 .nb.act svg{transform:scale(1.1)}
