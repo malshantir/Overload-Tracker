@@ -2184,10 +2184,10 @@ function LogPage({ program, setProgram, sessions, setSessions, showToast, pendin
                     ) : exNotes[ex.id] ? (
                       <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6, fontSize: 10, color: "var(--c2)" }}>
                         <span>{exNotes[ex.id]}</span>
-                        <button className="bg-btn" style={{ fontSize: 8, color: "var(--c4)", padding: 0, minWidth: "auto" }} onClick={() => startEditNote(ex.id)}>✎</button>
+                        <button className="bg-btn" style={{ fontSize: 8, color: "var(--c4)", padding: "8px 10px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => startEditNote(ex.id)}>✎</button>
                       </div>
                     ) : (
-                      <button className="bg-btn" style={{ fontSize: 8, color: "var(--c4)", marginTop: 6, padding: 0 }} onClick={() => startEditNote(ex.id)}>+ Add note</button>
+                      <button className="bg-btn" style={{ fontSize: 9, color: "var(--c4)", marginTop: 6, padding: "8px 12px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => startEditNote(ex.id)}>+ Add note</button>
                     )}
                   </div>
                   <button className="bg-btn" onClick={() => setHistView(ex.id)} style={{ fontSize: 8, color: "var(--c3)", marginLeft: 8 }}>HISTORY</button>
