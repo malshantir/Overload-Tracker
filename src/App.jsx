@@ -3397,27 +3397,14 @@ function SupportPage({ onBack }) {
 // ACCOUNT PAGE
 // ══════════════════════════════════════════════
 function AccountPage({ onBack, onDeleteAccount }) {
-  const [expanded, setExpanded] = useState({ username: false, password: false, del: false });
-  const [newUsername, setNewUsername] = useState("");
-  const [usernameErr, setUsernameErr] = useState("");
-  const [usernameOk, setUsernameOk] = useState(false);
+  const [expanded, setExpanded] = useState({ password: false, del: false });
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const [pwErrs, setPwErrs] = useState({});
   const [pwOk, setPwOk] = useState(false);
 
   function toggle(key) {
     setExpanded(p => ({ ...p, [key]: !p[key] }));
-    if (key === "username") { setUsernameErr(""); setUsernameOk(false); }
     if (key === "password") { setPwErrs({}); setPwOk(false); }
-  }
-
-  function saveUsername() {
-    if (!newUsername || newUsername.trim().length < 3) { setUsernameErr("Min 3 characters."); return; }
-    try {
-      const acc = JSON.parse(localStorage.getItem(SK_ACCOUNT) || "{}");
-      localStorage.setItem(SK_ACCOUNT, JSON.stringify({ ...acc, username: newUsername.trim() }));
-      setUsernameOk(true); setNewUsername("");
-    } catch { setUsernameErr("Something went wrong."); }
   }
 
   function savePassword() {
@@ -3443,27 +3430,6 @@ function AccountPage({ onBack, onDeleteAccount }) {
         <div className="profile-title">ACCOUNT</div>
       </div>
       <div className="profile-body">
-
-        <div className="acc-card">
-          <button className="acc-header" onClick={() => toggle("username")}>
-            <span>CHANGE USERNAME</span>
-            <span className={`acc-chevron${expanded.username ? " open" : ""}`}><Icons.ChevRight size={14} /></span>
-          </button>
-          {expanded.username && (
-            <div className="acc-body">
-              {usernameOk
-                ? <div style={{ fontSize: 11, color: "var(--green)", padding: "6px 0" }}>Username updated successfully.</div>
-                : <>
-                    <div className="fld">
-                      <label className="lbl">NEW USERNAME</label>
-                      <input className="ti" autoComplete="off" value={newUsername} onChange={e => { setNewUsername(e.target.value); setUsernameErr(""); }} placeholder="Choose a new username" />
-                      {usernameErr && <div className="err">{usernameErr}</div>}
-                    </div>
-                    <button className="bp" style={{ width: "100%", fontSize: 9, padding: "10px 0" }} onClick={saveUsername}>UPDATE USERNAME</button>
-                  </>}
-            </div>
-          )}
-        </div>
 
         <div className="acc-card">
           <button className="acc-header" onClick={() => toggle("password")}>
