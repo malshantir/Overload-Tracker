@@ -3747,7 +3747,13 @@ function LogInForm({ onSuccess, onBack, showToast }) {
 // ROOT
 // ══════════════════════════════════════════════
 export default function App() {
-  const [page, setPage] = useState("intro");
+  const [page, setPage] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SK_P) || "null");
+      if (saved?.sessions?.length > 0) return "home";
+      return "intro";
+    } catch { return "intro"; }
+  });
   const [launched, setLaunched] = useState(false);
   const [program, setProgram] = useState(null);
   const [sessions, setSessions] = useState({});
