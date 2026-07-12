@@ -2200,8 +2200,8 @@ function LogPage({ program, setProgram, sessions, setSessions, showToast, pendin
                       <button className="bg-btn" style={{ fontSize: 9, color: "var(--c4)", marginTop: 6, padding: "8px 12px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => startEditNote(ex.id)}>+ Add note</button>
                     )}
                   </div>
-                  <button className="bg-btn" onClick={() => setHistView(ex.id)} style={{ fontSize: 8, color: "var(--c3)", marginLeft: 8 }}>HISTORY</button>
-                  <button className="bg-btn" onClick={() => setShowRemoveExConfirm(ex.id)} style={{ fontSize: 10, color: "var(--red)", marginLeft: 4, padding: "4px 6px", minWidth: "auto" }} title="Remove exercise from today's session">🗑</button>
+                  <button className="bg-btn" onClick={() => setHistView(ex.id)} style={{ fontSize: 8, color: "var(--c3)", marginLeft: 8, padding: "8px 12px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>HISTORY</button>
+                  <button className="bg-btn" onClick={() => setShowRemoveExConfirm(ex.id)} style={{ fontSize: 10, color: "var(--red)", marginLeft: 16, padding: "8px 10px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }} title="Remove exercise from today's session">🗑</button>
                 </div>
 
                 <div className="set-table">
