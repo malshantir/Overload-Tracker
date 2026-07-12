@@ -2192,12 +2192,11 @@ function LogPage({ program, setProgram, sessions, setSessions, showToast, pendin
                         <button className="bo" style={{ fontSize: 8, padding: "4px 8px" }} onClick={cancelEditNote}>×</button>
                       </div>
                     ) : exNotes[ex.id] ? (
-                      <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6, fontSize: 10, color: "var(--c2)" }}>
-                        <span>{exNotes[ex.id]}</span>
-                        <button className="bg-btn" style={{ fontSize: 8, color: "var(--c4)", padding: "8px 10px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => startEditNote(ex.id)}>✎</button>
+                      <div style={{ marginTop: 6, fontSize: 10, color: "var(--c2)", padding: "8px 10px", backgroundColor: "var(--bg3)", borderRadius: "4px", cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center" }} onClick={() => startEditNote(ex.id)}>
+                        {exNotes[ex.id]}
                       </div>
                     ) : (
-                      <button className="bg-btn" style={{ fontSize: 9, color: "var(--c4)", marginTop: 6, padding: "8px 12px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => startEditNote(ex.id)}>+ Add note</button>
+                      <div style={{ marginTop: 6, fontSize: 10, color: "var(--c4)", padding: "10px 12px", backgroundColor: "var(--bg3)", borderRadius: "4px", cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => startEditNote(ex.id)}>+ Add note</div>
                     )}
                   </div>
                   <button className="bg-btn" onClick={() => setHistView(ex.id)} style={{ fontSize: 8, color: "var(--c3)", marginLeft: 8, padding: "8px 12px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>HISTORY</button>
