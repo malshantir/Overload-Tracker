@@ -1629,13 +1629,15 @@ function LogPage({ program, setProgram, sessions, setSessions, showToast, pendin
       setSessions(p => {
         const next = { ...p, [`${s.id}__date`]: todayISO() };
         delete next[`${s.id}__completed`];
-        if (!next[k]) next[k] = {};
+        const hasCompletion = next[`${s.id}__done__${todayISO()}`];
+        if (hasCompletion && next[k]) {
+          next[`${s.id}__backup__${todayISO()}`] = JSON.parse(JSON.stringify(next[k]));
+        }
+        next[k] = {};
         for (const ex of s.exercises) {
-          if (!next[k][ex.id]) {
-            next[k][ex.id] = {};
-            for (let i = 0; i < (ex.sets || 0); i++) {
-              next[k][ex.id][String(i)] = { weight: "", reps: "", rir: null };
-            }
+          next[k][ex.id] = {};
+          for (let i = 0; i < (ex.sets || 0); i++) {
+            next[k][ex.id][String(i)] = { weight: "", reps: "", rir: null };
           }
         }
         return next;
@@ -1674,9 +1676,17 @@ function LogPage({ program, setProgram, sessions, setSessions, showToast, pendin
     setSessions(p => {
       const next = { ...p };
       const date = next[`${sess?.id}__date`] || todayISO();
+      const backupKey = `${sess.id}__backup__${date}`;
+      const hasBackup = next[backupKey];
       delete next[`${sess.id}__${date}`];
       delete next[`${sess?.id}__date`];
       delete next[`${sess?.id}__completed`];
+      if (hasBackup) {
+        next[`${sess.id}__${date}`] = next[backupKey];
+        next[`${sess.id}__date`] = date;
+        next[`${sess.id}__done__${date}`] = "1";
+      }
+      delete next[backupKey];
       try { localStorage.setItem(SK_S, JSON.stringify(next)); } catch {}
       return next;
     });
