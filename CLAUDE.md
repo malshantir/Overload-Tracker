@@ -1,5 +1,13 @@
 # OVERLOAD TRACKER — Project Context
 
+## Live Deployment
+
+**Live URL**: https://overload-tracker.vercel.app
+
+The app is deployed on Vercel with automatic deployments on git push to main. All localStorage-based data persists across browser sessions on the user's device.
+
+---
+
 ## Development Rules
 
 These rules are non-negotiable and apply to every change:
@@ -274,7 +282,7 @@ Day names display in **uppercase**. No chevron on cards — tapping selects rath
 All render as full-screen `position:fixed` overlays at z-index:82, accessed via the hamburger menu.
 
 - **Profile**: Accordion with two sections (both open by default). Reads `SK_U` synchronously in `useState` initializer (not a useEffect) to avoid flash of `—`. Personal Details shows username, name, and email (username/name from `SK_U`, email from `SK_ACCOUNT`). Physical Stats shows age, weight, height. All fields editable inline. `SK_U` is **not** cleared on logout — profile data persists across login cycles since there is no re-setup step on re-login. Username field has edit icon for inline editing (synced with Account page).
-- **Account**: editable username/password fields. **Change Username** replaces the old "Change Email" option. Username changes are synced with Profile page. "DELETE ACCOUNT" option (clears all localStorage including `SK_U`). All password fields have `autocomplete='new-password'` to prevent browser auto-fill; username field has `autocomplete='off'`.
+- **Account**: Password change and account deletion options. Username editing moved to Profile page to reduce redundancy. "DELETE ACCOUNT" option (clears all localStorage including `SK_U`). All password fields have `autocomplete='new-password'` to prevent browser auto-fill.
 - **Settings**: Three accordion sections — Units (lb/kg), Theme (dark/light), and **Exercise Tracking** (by_day / combined). Exercise Tracking reads/writes `SK_DUP` and updates root App `dupPref` state so Progress page reacts immediately without page reload. Saved to `SK_SETTINGS` for units/theme; `SK_DUP` for tracking preference.
 - **Support**: Contact Support / Privacy Policy / Terms of Service sub-views. Support sub-views go back to the Support list (not the main menu).
 
@@ -336,6 +344,36 @@ npm run preview  # preview production build
 ```
 
 The app is a single-page app with no routing library. Always run `npm run build` after changes to confirm no compile errors before finishing a task.
+
+---
+
+## Recent Bug Fixes & Improvements (July 2026)
+
+### Session Data Integrity
+- **Session date consistency**: Completion date is now read once from the date picker value when COMPLETE SESSION is tapped, passed through all write operations (detectSessionChanges, updateProgramWithChanges, completeSession) to ensure every localStorage write uses the same date.
+- **Critical data loss fix**: When re-logging the same training day, original completed session data is now backed up before initialization. On discard, the backup is restored, preventing permanent data loss.
+- **Date change handler**: When user changes date during active session, original completed data is backed up (`${sess.id}__backup__${date}`), old log is cleared, and new empty sets are initialized. On discard, backup is restored.
+
+### Mobile UX & Accessibility
+- **Full-width mobile**: Changed `.app`, `.drw`, `.modal` from `max-width: 480px` to `max-width: 100%`, and added `width: 100%` to html/body/#root to fill entire mobile screen width.
+- **Viewport meta tag**: Updated to `width=device-width, initial-scale=1.0, maximum-scale=1.0` for proper mobile scaling.
+- **Navigation visibility**: Fixed bottom nav tabs (HOME, SPLIT, LOG, CAL, PROGRESS) — changed tab text color from `var(--c4)` (#3a3a3a, too dark) to `#aaaaaa`, and nav bar background to solid `#080808` to improve contrast on mobile.
+- **Button accessibility (44x44px tap targets)**: Implemented across all interactive elements:
+  - Exercise card buttons (HISTORY, delete icon) 
+  - Note editing (saved note text is now directly tappable, no separate button)
+  - +SET and -SET buttons 
+  - Account settings buttons
+  - Form buttons (SAVE, CANCEL, etc.)
+- **Button spacing**: Increased gap between HISTORY and delete buttons from 4px to 16px for clear separation on mobile.
+
+### UI/UX Improvements
+- **Exercise note editing**: Removed separate pencil icon button. Saved notes now display as interactive containers with background color (`var(--bg3)`) and `cursor: pointer`. Tapping the note text opens edit mode. Both saved notes and "+ Add note" use same tappable pattern for consistency.
+- **Page initialization**: Home page now initializes with correct page state by checking localStorage directly in `useState` initializer, preventing flash of "Start Your Plan" screen for returning users with existing splits.
+- **Account settings**: Removed redundant "Change Username" option (can already be edited on Profile page), keeping only "Change Password" and "Delete Account".
+
+### Configuration & Deployment
+- **Vite config**: Added `base: '/'` to ensure correct routing on Vercel deployment.
+- **Git configuration**: Updated `.gitignore` to cleanly exclude `node_modules/`, `dist/`, `.env`, `.env.local`, and `*.log`.
 
 ---
 

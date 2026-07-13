@@ -544,15 +544,18 @@ function Sparkline({ data, color = "#4ade80", w = 90, h = 36, dots = false }) {
 function useExTimer() {
   const [timers, setTimers] = useState({});
   const refs = useRef({});
+  const startTimestamps = useRef({});
 
   function startTimer(exId, secs) {
     if (refs.current[exId]) clearInterval(refs.current[exId]);
+    startTimestamps.current[exId] = Date.now();
     setTimers(p => ({ ...p, [exId]: { running: true, secs, total: secs } }));
     refs.current[exId] = setInterval(() => {
       setTimers(p => {
         const t = p[exId];
         if (!t || t.secs <= 1) {
           clearInterval(refs.current[exId]);
+          delete startTimestamps.current[exId];
           return { ...p, [exId]: { ...t, running: false, secs: 0 } };
         }
         return { ...p, [exId]: { ...t, secs: t.secs - 1 } };
@@ -562,6 +565,7 @@ function useExTimer() {
 
   function resetTimer(exId) {
     if (refs.current[exId]) clearInterval(refs.current[exId]);
+    delete startTimestamps.current[exId];
     setTimers(p => {
       const t = p[exId];
       if (!t) return p;
@@ -571,11 +575,39 @@ function useExTimer() {
 
   function stopTimer(exId) {
     if (refs.current[exId]) clearInterval(refs.current[exId]);
+    delete startTimestamps.current[exId];
     setTimers(p => ({ ...p, [exId]: { ...(p[exId] || {}), running: false } }));
   }
 
   useEffect(() => {
-    return () => { Object.values(refs.current).forEach(clearInterval); };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setTimers(p => {
+          const updated = { ...p };
+          Object.keys(startTimestamps.current).forEach(exId => {
+            if (updated[exId]?.running) {
+              const elapsed = Math.floor((Date.now() - startTimestamps.current[exId]) / 1000);
+              const remaining = Math.max(0, updated[exId].total - elapsed);
+              updated[exId] = { ...updated[exId], secs: remaining };
+              if (remaining === 0) {
+                if (refs.current[exId]) clearInterval(refs.current[exId]);
+                delete startTimestamps.current[exId];
+                updated[exId] = { ...updated[exId], running: false };
+              } else {
+                startTimestamps.current[exId] = Date.now();
+              }
+            }
+          });
+          return updated;
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      Object.values(refs.current).forEach(clearInterval);
+    };
   }, []);
 
   return { timers, startTimer, resetTimer, stopTimer };
@@ -1684,7 +1716,6 @@ function LogPage({ program, setProgram, sessions, setSessions, showToast, pendin
       if (hasBackup) {
         next[`${sess.id}__${date}`] = next[backupKey];
         next[`${sess.id}__date`] = date;
-        next[`${sess.id}__done__${date}`] = "1";
       }
       delete next[backupKey];
       try { localStorage.setItem(SK_S, JSON.stringify(next)); } catch {}
