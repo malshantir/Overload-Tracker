@@ -544,24 +544,30 @@ function Sparkline({ data, color = "#4ade80", w = 90, h = 36, dots = false }) {
 function useExTimer() {
   const [timers, setTimers] = useState({});
   const refs = useRef({});
+  const endTimes = useRef({});
 
   function startTimer(exId, secs) {
     if (refs.current[exId]) clearInterval(refs.current[exId]);
+    endTimes.current[exId] = Date.now() + (secs * 1000);
     setTimers(p => ({ ...p, [exId]: { running: true, secs, total: secs } }));
     refs.current[exId] = setInterval(() => {
       setTimers(p => {
         const t = p[exId];
-        if (!t || t.secs <= 1) {
+        if (!t) return p;
+        const remaining = Math.max(0, Math.floor((endTimes.current[exId] - Date.now()) / 1000));
+        if (remaining === 0) {
           clearInterval(refs.current[exId]);
+          delete endTimes.current[exId];
           return { ...p, [exId]: { ...t, running: false, secs: 0 } };
         }
-        return { ...p, [exId]: { ...t, secs: t.secs - 1 } };
+        return { ...p, [exId]: { ...t, secs: remaining } };
       });
     }, 1000);
   }
 
   function resetTimer(exId) {
     if (refs.current[exId]) clearInterval(refs.current[exId]);
+    delete endTimes.current[exId];
     setTimers(p => {
       const t = p[exId];
       if (!t) return p;
@@ -571,14 +577,22 @@ function useExTimer() {
 
   function stopTimer(exId) {
     if (refs.current[exId]) clearInterval(refs.current[exId]);
+    delete endTimes.current[exId];
     setTimers(p => ({ ...p, [exId]: { ...(p[exId] || {}), running: false } }));
+  }
+
+  function clearAllTimers() {
+    Object.values(refs.current).forEach(clearInterval);
+    refs.current = {};
+    endTimes.current = {};
+    setTimers({});
   }
 
   useEffect(() => {
     return () => { Object.values(refs.current).forEach(clearInterval); };
   }, []);
 
-  return { timers, startTimer, resetTimer, stopTimer };
+  return { timers, startTimer, resetTimer, stopTimer, clearAllTimers };
 }
 
 // ─── DRAWER ───
@@ -1483,7 +1497,7 @@ function LogPage({ program, setProgram, sessions, setSessions, showToast, pendin
   const [originalSessionExercises, setOriginalSessionExercises] = useState(null);
   const [showChangeConfirm, setShowChangeConfirm] = useState(false);
   const [showRemoveExConfirm, setShowRemoveExConfirm] = useState(null);
-  const { timers, startTimer, resetTimer } = useExTimer();
+  const { timers, startTimer, resetTimer, clearAllTimers } = useExTimer();
   const [restDuration, setRestDuration] = useState(() => {
     try { return parseInt(localStorage.getItem(SK_REST)) || 90; } catch { return 90; }
   });
@@ -1673,6 +1687,7 @@ function LogPage({ program, setProgram, sessions, setSessions, showToast, pendin
   }
 
   function discardSession() {
+    clearAllTimers();
     setSessions(p => {
       const next = { ...p };
       const date = next[`${sess?.id}__date`] || todayISO();
@@ -1705,6 +1720,7 @@ function LogPage({ program, setProgram, sessions, setSessions, showToast, pendin
   }
 
   function completeSession(completionDate = sessDate) {
+    clearAllTimers();
     const vol = calcVol();
     const sets = countLogged();
     const prs = countSessionPRs();
