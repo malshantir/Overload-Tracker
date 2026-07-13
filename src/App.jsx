@@ -587,14 +587,13 @@ function useExTimer() {
           Object.keys(startTimestamps.current).forEach(exId => {
             if (updated[exId]?.running) {
               const elapsed = Math.floor((Date.now() - startTimestamps.current[exId]) / 1000);
-              const remaining = Math.max(0, updated[exId].total - elapsed);
-              updated[exId] = { ...updated[exId], secs: remaining };
+              const remaining = Math.max(0, updated[exId].secs - elapsed);
+              startTimestamps.current[exId] = Date.now();
+              updated[exId] = { ...updated[exId], secs: remaining, total: remaining };
               if (remaining === 0) {
                 if (refs.current[exId]) clearInterval(refs.current[exId]);
                 delete startTimestamps.current[exId];
                 updated[exId] = { ...updated[exId], running: false };
-              } else {
-                startTimestamps.current[exId] = Date.now();
               }
             }
           });
