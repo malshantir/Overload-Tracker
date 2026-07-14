@@ -1095,7 +1095,6 @@ function SplitPage({ program, setProgram, showToast, onDupPrefChange }) {
           </div>
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
             <button className="bg-btn" onClick={() => setNewProgPromptOpen(true)}>CREATE NEW PROGRAM</button>
-            <button className="bg-btn" onClick={() => setAddDayOpen(true)}>+ ADD DAY</button>
           </div>
         </div>
       </div>
@@ -1133,6 +1132,7 @@ function SplitPage({ program, setProgram, showToast, onDupPrefChange }) {
             </div>
           </div>
         ))}
+        <button className="bp" style={{ width: "100%", marginTop: 16, fontSize: 11, padding: "12px 16px" }} onClick={() => setAddDayOpen(true)}>+ ADD DAY</button>
       </div>
       <Drawer open={addDayOpen} onClose={() => setAddDayOpen(false)}>
         <AddDayDrawer existingNames={program.sessions.map(s => s.name)} onAdd={name => {
