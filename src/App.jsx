@@ -1215,6 +1215,7 @@ function SplitPage({ program, setProgram, showToast, onDupPrefChange }) {
 
 function DayEditPage({ sess, program, saveProgram, showToast, onBack }) {
   const [drawer, setDrawer] = useState({ open: false, type: null, data: null });
+  const [isReordering, setIsReordering] = useState(false);
   const allNames = program.sessions.map(s => s.name);
   const currentSess = program.sessions.find(s => s.id === sess.id) || sess;
 
@@ -1253,6 +1254,30 @@ function DayEditPage({ sess, program, saveProgram, showToast, onBack }) {
     saveProgram(next);
   }
 
+  function moveExerciseUp(idx) {
+    if (idx <= 0) return;
+    const next = JSON.parse(JSON.stringify(program));
+    const s = next.sessions.find(s => s.id === sess.id);
+    if (s) {
+      const exs = s.exercises;
+      [exs[idx - 1], exs[idx]] = [exs[idx], exs[idx - 1]];
+      exs.forEach((e, i) => { e.order_index = i; });
+    }
+    saveProgram(next);
+  }
+
+  function moveExerciseDown(idx) {
+    if (idx >= currentSess.exercises.length - 1) return;
+    const next = JSON.parse(JSON.stringify(program));
+    const s = next.sessions.find(s => s.id === sess.id);
+    if (s) {
+      const exs = s.exercises;
+      [exs[idx], exs[idx + 1]] = [exs[idx + 1], exs[idx]];
+      exs.forEach((e, i) => { e.order_index = i; });
+    }
+    saveProgram(next);
+  }
+
   return (
     <div>
       <div className="hdr">
@@ -1260,7 +1285,7 @@ function DayEditPage({ sess, program, saveProgram, showToast, onBack }) {
           <button className="back-btn" onClick={onBack}><Icons.ChevLeft size={13} />BACK</button>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {currentSess.exercises.length > 1 && (
-              <button className="bg-btn" onClick={() => setDrawer({ open: true, type: "reorder" })}>REORDER</button>
+              <button className={isReordering ? "bp" : "bg-btn"} style={{ fontSize: 9, padding: "8px 14px", background: isReordering ? "var(--blue)" : undefined, borderColor: isReordering ? "var(--blue)" : undefined }} onClick={() => setIsReordering(!isReordering)}>{isReordering ? "DONE" : "REORDER"}</button>
             )}
             <button className="bp" style={{ fontSize: 9, padding: "8px 14px" }} onClick={onBack}>SAVE →</button>
           </div>
@@ -1277,13 +1302,31 @@ function DayEditPage({ sess, program, saveProgram, showToast, onBack }) {
         <div className="card">
           {currentSess.exercises.length === 0
             ? <div style={{ fontSize: 11, color: "var(--c4)", textAlign: "center", padding: "10px 0", letterSpacing: ".1em" }}>NO EXERCISES YET</div>
-            : currentSess.exercises.map(ex => (
+            : currentSess.exercises.map((ex, idx) => (
               <div key={ex.id} className="ex-row-edit">
+                {isReordering ? (
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <button
+                      className="bg-btn"
+                      style={{ fontSize: 14, padding: "4px 8px", minWidth: 32, minHeight: 32, opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "default" : "pointer" }}
+                      onClick={() => moveExerciseUp(idx)}
+                      disabled={idx === 0}
+                    >↑</button>
+                    <button
+                      className="bg-btn"
+                      style={{ fontSize: 14, padding: "4px 8px", minWidth: 32, minHeight: 32, opacity: idx === currentSess.exercises.length - 1 ? 0.3 : 1, cursor: idx === currentSess.exercises.length - 1 ? "default" : "pointer" }}
+                      onClick={() => moveExerciseDown(idx)}
+                      disabled={idx === currentSess.exercises.length - 1}
+                    >↓</button>
+                  </div>
+                ) : null}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, color: "var(--c2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ex.name}</div>
                   <div style={{ fontSize: 9, color: "var(--c5)", marginTop: 2, letterSpacing: ".06em" }}>{ex.sets} sets · {ex.rep_min}–{ex.rep_max} reps</div>
                 </div>
-                <button className="ib" onClick={() => setDrawer({ open: true, type: "edit_ex", data: { ex } })}><Icons.Edit /></button>
+                {!isReordering && (
+                  <button className="ib" onClick={() => setDrawer({ open: true, type: "edit_ex", data: { ex } })}><Icons.Edit /></button>
+                )}
               </div>
             ))}
         </div>
@@ -1313,9 +1356,6 @@ function DayEditPage({ sess, program, saveProgram, showToast, onBack }) {
               <button className="bp" style={{ flex: 2, background: "var(--red)", color: "#000" }} onClick={removeSession}>REMOVE →</button>
             </div>
           </div>
-        )}
-        {drawer.type === "reorder" && (
-          <ReorderDrawer sessId={currentSess.id} program={program} saveProgram={saveProgram} setDrawer={setDrawer} showToast={showToast} />
         )}
       </Drawer>
     </div>
@@ -1425,33 +1465,6 @@ function ExForm({ initial = {}, onSave, onRemove, program }) {
         {onRemove && <button className="bo" style={{ flex: 1, color: "var(--red)", borderColor: "var(--red)" }} onClick={onRemove}>REMOVE</button>}
         <button className="bp" style={{ flex: 2 }} onClick={submit}>{initial.name ? "SAVE →" : "ADD →"}</button>
       </div>
-    </div>
-  );
-}
-
-function ReorderDrawer({ sessId, program, saveProgram, setDrawer, showToast }) {
-  const sess = program.sessions.find(s => s.id === sessId);
-  const [order, setOrder] = useState(sess ? [...sess.exercises] : []);
-  const [drag, setDrag] = useState(null);
-  return (
-    <div>
-      <div className="drw-title">REORDER EXERCISES</div>
-      <div className="drw-sub">DRAG TO REORDER · WON'T AFFECT PROGRESS CHARTS</div>
-      {order.map((ex, i) => (
-        <div key={ex.id} className="reorder-item" draggable
-          onDragStart={() => setDrag(i)} onDragOver={e => e.preventDefault()}
-          onDrop={() => { if (drag === null || drag === i) return; const n = [...order]; const [mv] = n.splice(drag, 1); n.splice(i, 0, mv); setOrder(n); setDrag(null); }}>
-          <Icons.Drag />
-          <span style={{ fontSize: 12, color: "var(--c2)", flex: 1 }}>{ex.name}</span>
-          <span style={{ fontSize: 9, color: "var(--c4)" }}>{ex.sets}×{ex.rep_min}–{ex.rep_max}</span>
-        </div>
-      ))}
-      <button className="bp" style={{ width: "100%", marginTop: 14 }} onClick={() => {
-        const next = JSON.parse(JSON.stringify(program));
-        const s = next.sessions.find(s => s.id === sessId);
-        if (s) s.exercises = order.map((e, i) => ({ ...e, order_index: i }));
-        saveProgram(next); setDrawer({ open: false }); showToast("ORDER SAVED");
-      }}>SAVE ORDER →</button>
     </div>
   );
 }
