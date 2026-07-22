@@ -877,10 +877,17 @@ function SplitPage({ program, setProgram, showToast, onDupPrefChange }) {
   });
   // Belt-and-suspenders: if the program prop later delivers sessions (e.g. after an
   // async state hydration), promote phase to "editor" so onboarding never shows over
-  // existing data.
+  // existing data. Also revert to "onboard" if program is cleared or has no sessions.
   useEffect(() => {
-    if (program?.sessions?.length > 0 && phase === "onboard") setPhase("editor");
-  }, [program]);
+    if (program?.sessions?.length > 0 && phase === "onboard") {
+      setPhase("editor");
+    } else if (!program?.sessions?.length && phase === "editor") {
+      setPhase("onboard");
+      setStep(0);
+      setProgName("");
+      setProgNameErr("");
+    }
+  }, [program, phase]);
   const [step, setStep] = useState(0);
   const [progName, setProgName] = useState("");
   const [progNameErr, setProgNameErr] = useState("");
@@ -3995,6 +4002,9 @@ export default function App() {
                 setProgram(prog);
                 saveExerciseNames(prog);
                 localStorage.setItem(SK_P, JSON.stringify(prog));
+                if (prog?.sessions?.length > 0) {
+                  setPage("home");
+                }
               }
               const { data: sessionData, error: sessionError } = await supabase.from("sessions").select("data").eq("user_id", user.id).single();
               if (!sessionError && sessionData?.data) {
@@ -4027,7 +4037,11 @@ export default function App() {
 
   useEffect(() => {
     if (launched && program?.sessions?.length > 0 && page === "intro") setPage("home");
-  }, [launched, program]);
+  }, [launched, program, page]);
+
+  useEffect(() => {
+    if (page === "home" && !program?.sessions?.length) setPage("intro");
+  }, [program, page]);
 
   useEffect(() => {
     if (Object.keys(sessions).length > 0) {
@@ -4041,8 +4055,15 @@ export default function App() {
   }, []);
 
   function handleStart() {
-    try { localStorage.setItem(SK_L, "1"); } catch {}
-    setLaunched(true); setPage("split");
+    try {
+      localStorage.setItem(SK_L, "1");
+      localStorage.removeItem(SK_P);
+      localStorage.removeItem(SK_S);
+    } catch {}
+    setProgram(null);
+    setSessions({});
+    setLaunched(true);
+    setPage("split");
   }
 
   function handleHomeStartSession(idx) {
@@ -4187,6 +4208,9 @@ export default function App() {
                 setProgram(prog);
                 saveExerciseNames(prog);
                 localStorage.setItem(SK_P, JSON.stringify(prog));
+                if (prog?.sessions?.length > 0) {
+                  setPage("home");
+                }
               }
               const { data: sessionData, error: sessionError } = await supabase.from("sessions").select("data").eq("user_id", user.id).single();
               if (!sessionError && sessionData?.data) {
