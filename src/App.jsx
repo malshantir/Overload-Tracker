@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "./supabase";
 
 const SK_P = "ot-prog-v5";
 const SK_S = "ot-sess-v5";
@@ -909,10 +910,19 @@ function SplitPage({ program, setProgram, showToast, onDupPrefChange }) {
     showToast("STARTING NEW PROGRAM");
   }
 
-  function saveProgram(next) {
+  async function saveProgram(next) {
     setProgram(next);
     try { localStorage.setItem(SK_P, JSON.stringify(next)); } catch {}
     saveExerciseNames(next);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (!userError && user) {
+        await supabase.from("programs").upsert({
+          user_id: user.id,
+          data: next
+        }, { onConflict: "user_id" });
+      }
+    } catch {}
   }
 
   function handleDayCount(n) {
@@ -3109,12 +3119,20 @@ function ProgressPage({ program, sessions, dupPref = "combined" }) {
 // USER SETUP FORM
 // ══════════════════════════════════════════════
 function UserSetupForm({ onSuccess, showToast }) {
-  const [form, setForm] = useState({ name: "", age: "", weight: "", wUnit: "lb", heightFt: "", heightIn: "", height: "", hUnit: "ftin" });
+  const [form, setForm] = useState(() => {
+    try {
+      const acc = JSON.parse(localStorage.getItem(SK_ACCOUNT) || "{}");
+      return { username: acc.username || "", name: "", age: "", weight: "", wUnit: "lb", heightFt: "", heightIn: "", height: "", hUnit: "ftin" };
+    } catch {
+      return { username: "", name: "", age: "", weight: "", wUnit: "lb", heightFt: "", heightIn: "", height: "", hUnit: "ftin" };
+    }
+  });
   const [errs, setErrs] = useState({});
   const up = f => v => setForm(p => ({ ...p, [f]: v }));
 
-  function submit() {
+  async function submit() {
     const e = {};
+    if (!form.username.trim()) e.username = "Username required.";
     if (!form.name.trim()) e.name = "Name required.";
     const age = parseInt(form.age);
     if (!form.age || isNaN(age) || age < 13 || age > 90) e.age = "Enter age 13–90.";
@@ -3131,6 +3149,22 @@ function UserSetupForm({ onSuccess, showToast }) {
     if (Object.keys(e).length) { setErrs(e); return; }
     try {
       localStorage.setItem(SK_U, JSON.stringify(form));
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (!userError && user) {
+        const wUnit = form.wUnit === "kg" ? "kg" : "lb";
+        const hUnit = form.hUnit === "cm" ? "cm" : "ftin";
+        const units = `${wUnit}_${hUnit}`;
+        const profileData = {
+          id: user.id,
+          username: form.username,
+          name: form.name,
+          age: parseInt(form.age),
+          weight: parseFloat(form.weight),
+          height: form.hUnit === "ftin" ? `${form.heightFt}'${form.heightIn}"` : form.height,
+          units: units
+        };
+        await supabase.from("profiles").upsert(profileData, { onConflict: "id" });
+      }
       showToast("Profile saved!", "tg");
       onSuccess();
     } catch { setErrs({ general: "Something went wrong." }); }
@@ -3143,6 +3177,11 @@ function UserSetupForm({ onSuccess, showToast }) {
         <div className="setup-sub">Helps personalise your experience</div>
       </div>
       <div className="auth-body">
+        <div className="fld">
+          <label className="lbl">USERNAME</label>
+          <input className="ti" type="text" value={form.username} onChange={e => up("username")(e.target.value)} placeholder="e.g. username" />
+          {errs.username && <div className="err">{errs.username}</div>}
+        </div>
         <div className="fld">
           <label className="lbl">NAME</label>
           <input className="ti" type="text" value={form.name} onChange={e => up("name")(e.target.value)} placeholder="Your name" />
@@ -3189,9 +3228,8 @@ function ProfilePage({ onBack }) {
   const [expanded, setExpanded] = useState({ personal: true, physical: true });
   const [data, setData] = useState(() => {
     try {
-      const acc = JSON.parse(localStorage.getItem(SK_ACCOUNT) || "{}");
       const u = JSON.parse(localStorage.getItem(SK_U) || "{}");
-      return { username: "", name: "", email: "", age: "", weight: "", wUnit: "lb", heightFt: "", heightIn: "", height: "", hUnit: "ftin", ...u, username: acc.username || "", email: acc.email || "" };
+      return { username: "", name: "", email: "", age: "", weight: "", wUnit: "lb", heightFt: "", heightIn: "", height: "", hUnit: "ftin", ...u };
     } catch {
       return { username: "", name: "", email: "", age: "", weight: "", wUnit: "lb", heightFt: "", heightIn: "", height: "", hUnit: "ftin" };
     }
@@ -3199,11 +3237,27 @@ function ProfilePage({ onBack }) {
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState({});
 
+  useEffect(() => {
+    async function loadProfileData() {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (!userError && user) {
+          setData(prev => ({ ...prev, email: user.email || "" }));
+          const { data: profileData, error: profileError } = await supabase.from("profiles").select("username").eq("id", user.id).single();
+          if (!profileError && profileData?.username) {
+            setData(prev => ({ ...prev, username: profileData.username }));
+          }
+        }
+      } catch {}
+    }
+    loadProfileData();
+  }, []);
+
   function toggle(key) { if (editing) return; setExpanded(p => ({ ...p, [key]: !p[key] })); }
 
   function startEdit(field) { setDraft({ ...data }); setEditing(field); }
   function cancelEdit() { setEditing(null); setDraft({}); }
-  function saveEdit() {
+  async function saveEdit() {
     try {
       const saved = { ...draft };
       if (editing === "username") {
@@ -3215,6 +3269,26 @@ function ProfilePage({ onBack }) {
       delete u.email;
       const filtered = Object.fromEntries(Object.entries(saved).filter(([k]) => k !== "username" && k !== "email"));
       localStorage.setItem(SK_U, JSON.stringify({ ...u, ...filtered }));
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (!userError && user) {
+        const wUnit = (filtered.wUnit || data.wUnit) === "kg" ? "kg" : "lb";
+        const hUnit = (filtered.hUnit || data.hUnit) === "cm" ? "cm" : "ftin";
+        const units = `${wUnit}_${hUnit}`;
+        const profileData = {
+          id: user.id,
+          username: saved.username || data.username,
+          name: filtered.name || data.name,
+          age: filtered.age ? parseInt(filtered.age) : data.age,
+          weight: filtered.weight ? parseFloat(filtered.weight) : data.weight,
+          height: (filtered.hUnit || data.hUnit) === "ftin"
+            ? `${filtered.heightFt || data.heightFt}'${filtered.heightIn || data.heightIn}"`
+            : (filtered.height || data.height),
+          units: units
+        };
+        await supabase.from("profiles").upsert(profileData, { onConflict: "id" });
+      }
+
       setData({ ...data, ...saved });
       setEditing(null); setDraft({});
     } catch {}
@@ -3676,26 +3750,56 @@ function SignUpForm({ onSuccess, onBack, showToast }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [errs, setErrs] = useState({});
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
-  function submit() {
+  async function submit() {
     const e = {};
     if (!username || username.trim().length < 3) e.username = "Min 3 characters.";
     if (!email || !/\S+@\S+\.\S+/.test(email)) e.email = "Valid email required.";
     if (!password || password.length < 6) e.password = "Min 6 characters.";
     if (password !== confirm) e.confirm = "Passwords don't match.";
     if (Object.keys(e).length) { setErrs(e); return; }
+
     try {
-      localStorage.removeItem(SK_ACTIVE); // clear active session first, before anything else
-      const existing = localStorage.getItem(SK_ACCOUNT);
-      if (existing && JSON.parse(existing).email === email.toLowerCase()) {
-        setErrs({ email: "An account with this email already exists." }); return;
-      }
+      localStorage.removeItem(SK_ACTIVE);
       [SK_P, SK_S, SK_U, SK_L, SK_DUP, SK_ACTIVE].forEach(k => localStorage.removeItem(k));
-      localStorage.setItem(SK_ACCOUNT, JSON.stringify({ username: username.trim(), email: email.toLowerCase(), password }));
-      localStorage.setItem(SK_SESSION, "1");
-      showToast("Account created!", "tg");
-      onSuccess();
-    } catch { setErrs({ general: "Something went wrong. Try again." }); }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.toLowerCase(),
+        password
+      });
+
+      if (error) {
+        setErrs({ general: error.message || "Sign up failed. Try again." });
+        return;
+      }
+
+      localStorage.setItem(SK_ACCOUNT, JSON.stringify({ username: username.trim(), email: email.toLowerCase() }));
+      showToast("Account created! Please check your email.", "tg");
+      setAwaitingConfirmation(true);
+    } catch (err) {
+      setErrs({ general: err.message || "Something went wrong. Try again." });
+    }
+  }
+
+  if (awaitingConfirmation) {
+    return (
+      <div className="auth-screen">
+        <div className="auth-top">
+          <button className="bg-btn" onClick={onBack}>← BACK</button>
+          <div className="auth-title">VERIFY EMAIL</div>
+        </div>
+        <div className="auth-body">
+          <div style={{ fontSize: 13, color: "var(--c2)", lineHeight: 1.7, textAlign: "center", marginBottom: 24 }}>
+            We sent a confirmation link to <span style={{ color: "var(--c1)", fontWeight: 500 }}>{email}</span>. Please click the link in your email to activate your account, then return here to log in.
+          </div>
+          <button className="bp" style={{ width: "100%" }} onClick={() => {
+            setAwaitingConfirmation(false);
+            onBack();
+          }}>← BACK TO LOGIN</button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -3737,22 +3841,29 @@ function LogInForm({ onSuccess, onBack, showToast }) {
   const [password, setPassword] = useState("");
   const [errs, setErrs] = useState({});
 
-  function submit() {
+  async function submit() {
     const e = {};
     if (!email) e.email = "Email required.";
     if (!password) e.password = "Password required.";
     if (Object.keys(e).length) { setErrs(e); return; }
+
     try {
-      const raw = localStorage.getItem(SK_ACCOUNT);
-      if (!raw) { setErrs({ general: "No account found. Please sign up first." }); return; }
-      const acc = JSON.parse(raw);
-      if (acc.email !== email.toLowerCase() || acc.password !== password) {
-        setErrs({ general: "Incorrect email or password." }); return;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password
+      });
+
+      if (error) {
+        setErrs({ general: error.message || "Incorrect email or password." });
+        return;
       }
+
       localStorage.setItem(SK_SESSION, "1");
       showToast("Welcome back!", "tg");
       onSuccess();
-    } catch { setErrs({ general: "Something went wrong. Try again." }); }
+    } catch (err) {
+      setErrs({ general: err.message || "Something went wrong. Try again." });
+    }
   }
 
   return (
@@ -3809,6 +3920,19 @@ export default function App() {
   });
   const [pendingSessionIdx, setPendingSessionIdx] = useState(null);
 
+  async function saveSessions(next) {
+    try { localStorage.setItem(SK_S, JSON.stringify(next)); } catch {}
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (!userError && user) {
+        await supabase.from("sessions").upsert({
+          user_id: user.id,
+          data: next
+        }, { onConflict: "user_id" });
+      }
+    } catch {}
+  }
+
   useEffect(() => {
     const fadeTimer = setTimeout(() => setSplashFade(true), 2000);
     const removeTimer = setTimeout(() => setSplash(false), 2500);
@@ -3816,18 +3940,88 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    try {
-      const l = localStorage.getItem(SK_L);
-      if (l === "1") setLaunched(true);
-      const p = localStorage.getItem(SK_P);
-      if (p) {
-        const prog = normalizeExerciseNames(JSON.parse(p));
-        setProgram(prog);
-        saveExerciseNames(prog);
+    async function loadInitialData() {
+      try {
+        const l = localStorage.getItem(SK_L);
+        if (l === "1") setLaunched(true);
+        const p = localStorage.getItem(SK_P);
+        if (p) {
+          const prog = normalizeExerciseNames(JSON.parse(p));
+          setProgram(prog);
+          saveExerciseNames(prog);
+        }
+        const s = localStorage.getItem(SK_S);
+        if (s) setSessions(JSON.parse(s));
+      } catch {}
+    }
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (session) {
+          localStorage.setItem(SK_SESSION, "1");
+          localStorage.removeItem(SK_U);
+          localStorage.removeItem(SK_P);
+          localStorage.removeItem(SK_S);
+          localStorage.removeItem(SK_ACCOUNT);
+          try {
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (!userError && user) {
+              const { data: profileData, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+              if (!profileError && profileData) {
+                const parsed = {
+                  name: profileData.name,
+                  age: profileData.age,
+                  weight: profileData.weight,
+                  wUnit: profileData.units?.includes("kg") ? "kg" : "lb",
+                  height: profileData.height,
+                  hUnit: profileData.units?.includes("cm") ? "cm" : "ftin",
+                  heightFt: profileData.units?.includes("ftin") && profileData.height ? parseInt(profileData.height.split("'")[0]) : "",
+                  heightIn: profileData.units?.includes("ftin") && profileData.height ? parseInt(profileData.height.split("'")[1]?.replace('"', '')) : ""
+                };
+                localStorage.setItem(SK_U, JSON.stringify(parsed));
+                if (profileData.username) {
+                  const acc = JSON.parse(localStorage.getItem(SK_ACCOUNT) || "{}");
+                  localStorage.setItem(SK_ACCOUNT, JSON.stringify({ ...acc, username: profileData.username }));
+                }
+              }
+              const { data: programData, error: programError } = await supabase.from("programs").select("data").eq("user_id", user.id).single();
+              if (!programError && programData?.data) {
+                const prog = normalizeExerciseNames(programData.data);
+                setProgram(prog);
+                saveExerciseNames(prog);
+                localStorage.setItem(SK_P, JSON.stringify(prog));
+              }
+              const { data: sessionData, error: sessionError } = await supabase.from("sessions").select("data").eq("user_id", user.id).single();
+              if (!sessionError && sessionData?.data) {
+                setSessions(sessionData.data);
+                localStorage.setItem(SK_S, JSON.stringify(sessionData.data));
+              }
+            }
+            const userProfile = JSON.parse(localStorage.getItem(SK_U) || "null");
+            if (userProfile && userProfile.name && userProfile.age && (userProfile.weight || userProfile.height)) {
+              setAuthState("app");
+            } else {
+              setAuthState("setup");
+            }
+          } catch {
+            setAuthState("setup");
+          }
+        } else {
+          localStorage.removeItem(SK_SESSION);
+          setAuthState("welcome");
+        }
+      } catch (err) {
+        console.error("Session check failed:", err);
+        localStorage.removeItem(SK_SESSION);
+        setAuthState("welcome");
       }
-      const s = localStorage.getItem(SK_S);
-      if (s) setSessions(JSON.parse(s));
-    } catch {}
+    }
+    checkSession();
   }, []);
 
 
@@ -3837,7 +4031,7 @@ export default function App() {
 
   useEffect(() => {
     if (Object.keys(sessions).length > 0) {
-      try { localStorage.setItem(SK_S, JSON.stringify(sessions)); } catch {}
+      saveSessions(sessions);
     }
   }, [sessions]);
 
@@ -3861,7 +4055,8 @@ export default function App() {
     try { localStorage.setItem(SK_DUP, pref); } catch {}
   }
 
-  function handleLogOut() {
+  async function handleLogOut() {
+    await supabase.auth.signOut();
     // SK_U (profile data) is intentionally kept — login does not re-run UserSetupForm,
     // so clearing it would permanently erase name/age/weight/height with no way to restore.
     try { [SK_P, SK_S, SK_L, SK_DUP, SK_SESSION, SK_ACTIVE].forEach(k => localStorage.removeItem(k)); } catch {}
@@ -3960,7 +4155,55 @@ export default function App() {
         <UserSetupForm onSuccess={() => setAuthState("app")} showToast={showToast} />
       )}
       {!splash && authState === "login" && (
-        <LogInForm onSuccess={() => setAuthState("app")} onBack={() => setAuthState("welcome")} showToast={showToast} />
+        <LogInForm onSuccess={async () => {
+          try {
+            localStorage.removeItem(SK_U);
+            localStorage.removeItem(SK_P);
+            localStorage.removeItem(SK_S);
+            localStorage.removeItem(SK_ACCOUNT);
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (!userError && user) {
+              const { data: profileData, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+              if (!profileError && profileData) {
+                const parsed = {
+                  name: profileData.name,
+                  age: profileData.age,
+                  weight: profileData.weight,
+                  wUnit: profileData.units?.includes("kg") ? "kg" : "lb",
+                  height: profileData.height,
+                  hUnit: profileData.units?.includes("cm") ? "cm" : "ftin",
+                  heightFt: profileData.units?.includes("ftin") && profileData.height ? parseInt(profileData.height.split("'")[0]) : "",
+                  heightIn: profileData.units?.includes("ftin") && profileData.height ? parseInt(profileData.height.split("'")[1]?.replace('"', '')) : ""
+                };
+                localStorage.setItem(SK_U, JSON.stringify(parsed));
+                if (profileData.username) {
+                  const acc = JSON.parse(localStorage.getItem(SK_ACCOUNT) || "{}");
+                  localStorage.setItem(SK_ACCOUNT, JSON.stringify({ ...acc, username: profileData.username }));
+                }
+              }
+              const { data: programData, error: programError } = await supabase.from("programs").select("data").eq("user_id", user.id).single();
+              if (!programError && programData?.data) {
+                const prog = normalizeExerciseNames(programData.data);
+                setProgram(prog);
+                saveExerciseNames(prog);
+                localStorage.setItem(SK_P, JSON.stringify(prog));
+              }
+              const { data: sessionData, error: sessionError } = await supabase.from("sessions").select("data").eq("user_id", user.id).single();
+              if (!sessionError && sessionData?.data) {
+                setSessions(sessionData.data);
+                localStorage.setItem(SK_S, JSON.stringify(sessionData.data));
+              }
+            }
+            const userProfile = JSON.parse(localStorage.getItem(SK_U) || "null");
+            if (userProfile && userProfile.name && userProfile.age && (userProfile.weight || userProfile.height)) {
+              setAuthState("app");
+            } else {
+              setAuthState("setup");
+            }
+          } catch {
+            setAuthState("setup");
+          }
+        }} onBack={() => setAuthState("welcome")} showToast={showToast} />
       )}
       {authState === "app" && <div className="app">
         <button className="ham-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">
