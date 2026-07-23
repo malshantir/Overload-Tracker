@@ -17,20 +17,21 @@ A mobile-first progressive overload fitness PWA built with React and Vite. Desig
 - **Dynamic Session Editing** — Add/remove exercises and sets mid-session with option to save changes permanently to your program
 - **Exercise Reordering** — Reorder exercises during active sessions with up/down controls, with option to save new order permanently
 - **Multiple Programs** — Create new training programs while preserving full historical data
-- **User Authentication** — Local account system with username, email and password
+- **Cross-Device Sync** — Data persists across devices via Supabase backend
+- **User Authentication** — Real authentication with email confirmation and forgot password flow powered by Supabase
 
 ## Tech Stack
 
 - **Frontend:** React 18, Vite
+- **Backend:** Supabase (authentication, database, real-time sync)
 - **Styling:** Custom CSS with CSS variables, dark theme
 - **State Management:** React useState/useEffect hooks
-- **Data Persistence:** localStorage (Supabase integration planned)
 - **Deployment:** Vercel
 
 ## Roadmap
 
 - [x] Vercel deployment
-- [ ] Supabase backend integration for cross-device sync
+- [x] Supabase backend integration for cross-device sync
 - [ ] AI progress analysis powered by Claude API
 - [ ] PWA setup for native mobile installation
 - [ ] Design polish with animation libraries
