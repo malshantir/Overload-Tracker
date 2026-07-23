@@ -886,6 +886,9 @@ function SplitPage({ program, setProgram, showToast, onDupPrefChange }) {
       setStep(0);
       setProgName("");
       setProgNameErr("");
+      setDays(4);
+      setDayNames(["Day 1", "Day 2", "Day 3", "Day 4"]);
+      setNameErrs({});
     }
   }, [program, phase]);
   const [step, setStep] = useState(0);
